@@ -40,7 +40,6 @@ public class Main {
 	}
 	
 	public static void main(String[] args) {
-		
 		try {
 			Thread.currentThread().sleep(500);
 		} catch (InterruptedException e) {
@@ -53,7 +52,7 @@ public class Main {
 		File mainServerDir = exelutionDir.getParentFile().getParentFile();
 		System.out.println("Searching for server files in \"" + mainServerDir.getPath() + "\"...");
 		
-		configsDirectory = new File(mainServerDir, "configs");
+		configsDirectory = new File(mainServerDir, "plugins/configs");
 		mainConfigDirectory = new File(configsDirectory, "ManhuntAndWorldReset");
 		
 		mainConfigDirectory.mkdirs();
@@ -77,14 +76,14 @@ public class Main {
 			}
 		}
 		
-		System.out.println(deletionOk);
+//		System.out.println(deletionOk);
 		
 		if(new File(mainServerDir, "server.properties").exists()) {
 			Thread serverThread = new Thread(new Runnable() {
 				@Override
 				public void run() {
 					try {
-						ps.set(Runtime.getRuntime().exec("cmd.exe /c \"cd \"" + mainServerDir.getPath() + "\" && start cmd /c " + launchServerFileName + "\""));
+						ps.set(Runtime.getRuntime().exec("cmd.exe /c \"pushd \"" + mainServerDir.getPath() + "\" && start cmd /c " + launchServerFileName + "\""));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -114,7 +113,7 @@ public class Main {
 			e.printStackTrace();
 		}
 		for (Map.Entry<String, Object> entry : yamlMap.entrySet()) {
-            System.out.println(entry.toString());
+//            System.out.println(entry.toString());
             if(entry.getKey().equals("launch-server-file-name")) {
             	launchServerFileName = (String) entry.getValue();
             }
