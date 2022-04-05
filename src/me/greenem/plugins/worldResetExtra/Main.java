@@ -103,6 +103,7 @@ public class Main {
 	
 	public static void loadConfig() {
 		File f = new File(mainConfigDirectory, "mainconfig.yml");
+		
 		f.getParentFile().mkdirs();
 		
 		Yaml yaml = new Yaml();
