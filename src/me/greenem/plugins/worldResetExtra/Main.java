@@ -8,21 +8,20 @@ import java.io.RandomAccessFile;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.yaml.snakeyaml.Yaml;
 
 public class Main {
-	
 	public static File serverDirectory;
 	public static File configsDirectory;
 	public static File mainConfigDirectory;
 	public static File world;
 	public static File worldNether;
 	public static File worldTheEnd;
+	public static String worldMainName = "world";
 	
-	// server.properties SHOULD BE IN FOLDER
-	// USER HAS TO SET launchServerFileName IN CONFIG (later)
 	// CURRENTLY WORKS ONLY ON WINDOWS (and difficult for me to test in other os)
 	
 	/*public static void killer(ProcessHandle ph) {
@@ -32,6 +31,7 @@ public class Main {
 		//System.out.println("Stage " + stage + ", " + ph.toString());
 		ph.destroyForcibly();
 	}*/
+	//killer(ps.get().toHandle());
 	
 	public static String launchServerFileName = "Run.bat";
 	public static boolean usedHalt = false;
@@ -61,28 +61,47 @@ public class Main {
 			System.out.println("You cannot start this application in your System32 directory!");
 			return;
 		}
-		//serverDirectory = exelutionDir.getParentFile().getParentFile();
-		serverDirectory = new File("G:\\SERVERS\\Dev Server 1.18");
+		serverDirectory = exelutionDir.getParentFile().getParentFile();
+//		serverDirectory = new File("G:\\SERVERS\\Dev Server 1.18");
 		
-		loadConfig();
-		if(true) return;
-		if(!checkConditions()) {
-			System.out.println("Wrong location");
+		if(!loadConfig()) {
+			System.out.println("Cannot find the config!");
 			return;
 		}
-		
+		if(!loadWorldName()) return;
+		if(!checkConditions()) return;
 		waitForTheServerToStopAndDeleteWorlds();
-//		start();
+	}
+	
+	private static boolean loadWorldName() {
+		File f = new File(serverDirectory, "server.properties");
+		Properties pr = new Properties();
+		FileInputStream is = null;
+		
+		try {
+			is = new FileInputStream(f);
+		} catch (FileNotFoundException e1) {
+			System.out.println("\"server.properties\" file is missing");
+			return false;
+		}
+		try {
+			pr.load(is);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				worldMainName = pr.getProperty("level-name");
+				is.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return true;
 	}
 	
 	private static boolean checkConditions() {
-		System.out.println("Searching for server files in \"" + serverDirectory.getPath() + "\"...");
+		System.out.println("Searching for server files in \"" + serverDirectory.getPath() + "\"");
 		
-		configsDirectory = new File(serverDirectory, "plugins/configs");
-		mainConfigDirectory = new File(configsDirectory, "ManhuntAndWorldReset");
-		mainConfigDirectory.mkdirs();
-		
-		String worldMainName = "world"; //TODO
 		world = new File(serverDirectory, worldMainName);
 		worldNether = new File(serverDirectory, worldMainName + "_nether");
 		worldTheEnd = new File(serverDirectory, worldMainName + "_the_end");
@@ -91,59 +110,48 @@ public class Main {
 			System.out.println("THE CODE WAS EXECUTED IN WORNG LOCATION OR THE WORLDS ARE ALREADY DELETED!");
 			return false;
 		}
-		if(!new File(serverDirectory, "server.properties").exists()) {
+		if(!new File(serverDirectory, launchServerFileName).exists()) {
+			System.out.println("The server launch script is missing");
 			return false;
 		}
+		/*if(!new File(serverDirectory, "server.properties").exists()) {
+			System.out.println("\"server.properties\" file is missing");
+			return false;
+		}*/
 		return true;
 	}
 	
 	private static void waitForTheServerToStopAndDeleteWorlds() {
 		//File f = new File(new File(System.getProperty("user.dir")).getParentFile().getParentFile(), "world/session.lock");
-		File f = new File(serverDirectory, "world/session.lock");
-		boolean serverStopped = (!f.exists()) || f.delete();
+//		File f = new File(serverDirectory, worldMainName + "/session.lock");
+//		boolean serverStopped = (!f.exists()) || f.delete();
+		boolean serverStopped = false;
 		int failedAtts = 0;
 		
-		if(!serverStopped) {
-			System.out.println("Waiting for the server to stop...");
-		} else {
-			failedAtts = 100; // bad code but still
-		}
+		int maxFailedAttempts = 10;
+		if(!usedHalt) maxFailedAttempts = 60;
 		
-		while(!serverStopped || failedAtts < 60) { // chenk config for halt
+		while(!serverStopped || failedAtts < maxFailedAttempts) {
 			try {
 				Thread.currentThread().sleep(1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			serverStopped = deleteDirectory(world) && deleteDirectory(worldNether) && deleteDirectory(worldTheEnd);
+			serverStopped = !(!deleteDirectory(world) && !deleteDirectory(worldNether) && !deleteDirectory(worldTheEnd));
 			if(!serverStopped) {
 				failedAtts++;
+				if(failedAtts==1) {
+					System.out.println("Waiting for the server to stop...");
+				}
 			} else {
 				System.out.println("Successfully deleted the files");
+				startServer();
+				break;
 			}
 		}
-		
-//		System.out.println("Starting the world resetting");
-	}
-	
-	private static void start() {
-		boolean deletionOk = false;
-		while(!deletionOk) {
-			if(deleteDirectory(world) && deleteDirectory(worldNether) && deleteDirectory(worldTheEnd)) {
-				deletionOk = true;
-			}
+		if(!serverStopped) {
+			System.out.println("The server is still running (cannot delete files), so the app got the waiting limit");
 		}
-		
-		if(!new File(serverDirectory, launchServerFileName).exists()) {
-			System.out.println("The launch script is missing");
-		}
-		
-		if(new File(serverDirectory, "server.properties").exists()) {
-			startServer();
-		} else {
-			System.out.println("Wrong location");
-		}
-		//killer(ps.get().toHandle());
 	}
 	
 	private static void startServer() {
@@ -161,37 +169,16 @@ public class Main {
 		serverThread.start();
 	}
 	
-	private static boolean isUsed(File file) {
-		boolean isLocked=false;
-		RandomAccessFile fos=null;
-		try {
-		      if(file.exists())
-		        fos=new RandomAccessFile(file,"rw");        
-		}catch (FileNotFoundException e) {
-		    isLocked = true;
-		}catch (SecurityException e) {
-		    isLocked = true;
-		}catch (Exception e) {
-		    // handle exception
-			
-		}finally {
-		    try {
-		        if(fos!=null) {
-		            fos.close();
-		        }
-		    }catch(Exception e) {
-		        //handle exception
-		    	
-		    }
-		}
-		return isLocked;
-	}
-	
 	@SuppressWarnings("unchecked")
-	public static void loadConfig() {
-		File f = new File(mainConfigDirectory, "mainconfig.yml");
+	public static boolean loadConfig() {
+		configsDirectory = new File(serverDirectory, "plugins/configs");
+		mainConfigDirectory = new File(configsDirectory, "ManhuntAndWorldReset");
+		mainConfigDirectory.mkdirs();
 		
-		f.getParentFile().mkdirs();
+		File f = new File(mainConfigDirectory, "mainconfig.yml");
+//		f.getParentFile().mkdirs();
+		
+		if(!f.exists()) return false;
 		
 		Yaml yaml = new Yaml();
 		HashMap<String, Object> yamlMap = null;
@@ -217,8 +204,35 @@ public class Main {
 	            	}	            	
             	}
             }
-            System.out.println(launchServerFileName);
-            System.out.println(usedHalt);
         }
+		return true;
+	}
+	
+	@Deprecated
+	@SuppressWarnings("unused")
+	private static boolean isUsed(File file) {
+		boolean isLocked=false;
+		RandomAccessFile fos=null;
+		try {
+		      if(file.exists())
+		        fos=new RandomAccessFile(file,"rw");
+		}catch (FileNotFoundException e) {
+		    isLocked = true;
+		}catch (SecurityException e) {
+		    isLocked = true;
+		}catch (Exception e) {
+		    // handle exception
+			
+		}finally {
+		    try {
+		        if(fos!=null) {
+		            fos.close();
+		        }
+		    }catch(Exception e) {
+		        //handle exception
+		    	
+		    }
+		}
+		return isLocked;
 	}
 }
