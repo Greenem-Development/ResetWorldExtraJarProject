@@ -5,6 +5,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.Channel;
+import java.nio.file.CopyOption;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -61,6 +66,7 @@ public class Main {
 			System.out.println("You cannot start this application in your System32 directory!");
 			return;
 		}
+		
 		serverDirectory = exelutionDir.getParentFile().getParentFile();
 //		serverDirectory = new File("G:\\SERVERS\\Dev Server 1.18");
 		
@@ -71,6 +77,25 @@ public class Main {
 		if(!loadWorldName()) return;
 		if(!checkConditions()) return;
 		waitForTheServerToStopAndDeleteWorlds();
+	}
+	
+	private static boolean isServerOn() {
+		File latestLog = new File(serverDirectory, "logs/latest.log");
+		File inSubfolderForLatestLog = new File(latestLog.getParentFile(), "testfolder/latest.log");
+		inSubfolderForLatestLog.getParentFile().mkdirs();
+		boolean result = false;
+		try {
+			Files.move(latestLog.toPath(), inSubfolderForLatestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			result = false;
+			Files.move(inSubfolderForLatestLog.toPath(), latestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		} catch (FileSystemException e) {
+			result = true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			deleteDirectory(inSubfolderForLatestLog.getParentFile());
+		}
+		return result;
 	}
 	
 	private static boolean loadWorldName() {
@@ -137,21 +162,35 @@ public class Main {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			serverStopped = !(!deleteDirectory(world) && !deleteDirectory(worldNether) && !deleteDirectory(worldTheEnd));
+			serverStopped = isServerOn();
 			if(!serverStopped) {
 				failedAtts++;
 				if(failedAtts==1) {
 					System.out.println("Waiting for the server to stop...");
 				}
 			} else {
-				System.out.println("Successfully deleted the files");
-				startServer();
+				System.out.println("Deleting the files...");
 				break;
 			}
 		}
 		if(!serverStopped) {
 			System.out.println("The server is still running (cannot delete files), so the app got the waiting limit");
+		} else {
+			deleteFiles();
+			System.out.println("Starting the server back...");
+			try {
+				Thread.currentThread().sleep(200);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			startServer();
 		}
+	}
+	
+	private static void deleteFiles() {
+		deleteDirectory(world);
+		deleteDirectory(worldNether);
+		deleteDirectory(worldTheEnd);
 	}
 	
 	private static void startServer() {
@@ -207,6 +246,30 @@ public class Main {
         }
 		return true;
 	}
+	
+	private static boolean isFileClosed(File file) {  
+        boolean closed;
+        Channel channel = null;
+        RandomAccessFile fos=null;
+        try {
+        	fos = new RandomAccessFile(file, "rw");
+            channel = fos.getChannel();
+            closed = true;
+        } catch(Exception ex) {
+            closed = false;
+        } finally {
+            if(channel!=null) {
+                try {
+                    channel.close();
+                    fos.close();
+                } catch (IOException ex) {
+                	System.out.println("1");
+                    // exception handling
+                }
+            }
+        }
+        return closed;
+}
 	
 	@Deprecated
 	@SuppressWarnings("unused")
