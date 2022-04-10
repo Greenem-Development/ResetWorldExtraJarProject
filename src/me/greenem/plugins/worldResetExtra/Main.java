@@ -79,25 +79,6 @@ public class Main {
 		waitForTheServerToStopAndDeleteWorlds();
 	}
 	
-	private static boolean isServerOn() {
-		File latestLog = new File(serverDirectory, "logs/latest.log");
-		File inSubfolderForLatestLog = new File(latestLog.getParentFile(), "testfolder/latest.log");
-		inSubfolderForLatestLog.getParentFile().mkdirs();
-		boolean result = false;
-		try {
-			Files.move(latestLog.toPath(), inSubfolderForLatestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			result = false;
-			Files.move(inSubfolderForLatestLog.toPath(), latestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		} catch (FileSystemException e) {
-			result = true;
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			deleteDirectory(inSubfolderForLatestLog.getParentFile());
-		}
-		return result;
-	}
-	
 	private static boolean loadWorldName() {
 		File f = new File(serverDirectory, "server.properties");
 		Properties pr = new Properties();
@@ -144,6 +125,25 @@ public class Main {
 			return false;
 		}*/
 		return true;
+	}
+	
+	private static boolean isServerOn() {
+		File latestLog = new File(serverDirectory, "logs/latest.log");
+		File inSubfolderForLatestLog = new File(latestLog.getParentFile(), "testfolder/latest.log");
+		inSubfolderForLatestLog.getParentFile().mkdirs();
+		boolean result = false;
+		try {
+			Files.move(latestLog.toPath(), inSubfolderForLatestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			result = false;
+			Files.move(inSubfolderForLatestLog.toPath(), latestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		} catch (FileSystemException e) {
+			result = true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			deleteDirectory(inSubfolderForLatestLog.getParentFile());
+		}
+		return result;
 	}
 	
 	private static void waitForTheServerToStopAndDeleteWorlds() {
@@ -245,57 +245,5 @@ public class Main {
             }
         }
 		return true;
-	}
-	
-	private static boolean isFileClosed(File file) {  
-        boolean closed;
-        Channel channel = null;
-        RandomAccessFile fos=null;
-        try {
-        	fos = new RandomAccessFile(file, "rw");
-            channel = fos.getChannel();
-            closed = true;
-        } catch(Exception ex) {
-            closed = false;
-        } finally {
-            if(channel!=null) {
-                try {
-                    channel.close();
-                    fos.close();
-                } catch (IOException ex) {
-                	System.out.println("1");
-                    // exception handling
-                }
-            }
-        }
-        return closed;
-}
-	
-	@Deprecated
-	@SuppressWarnings("unused")
-	private static boolean isUsed(File file) {
-		boolean isLocked=false;
-		RandomAccessFile fos=null;
-		try {
-		      if(file.exists())
-		        fos=new RandomAccessFile(file,"rw");
-		}catch (FileNotFoundException e) {
-		    isLocked = true;
-		}catch (SecurityException e) {
-		    isLocked = true;
-		}catch (Exception e) {
-		    // handle exception
-			
-		}finally {
-		    try {
-		        if(fos!=null) {
-		            fos.close();
-		        }
-		    }catch(Exception e) {
-		        //handle exception
-		    	
-		    }
-		}
-		return isLocked;
 	}
 }
