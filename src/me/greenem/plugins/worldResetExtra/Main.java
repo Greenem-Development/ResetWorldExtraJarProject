@@ -59,7 +59,7 @@ public class Main {
 		}
 		
 		System.out.println("This is extra java programm required to reset the server worlds");
-		System.out.println("If it does show up, everything is working fine");
+		System.out.println("If it does show up (sometimes it doesn't), then everything is working fine");
 		
 		File exelutionDir = new File(System.getProperty("user.dir"));
 		if(exelutionDir.getAbsolutePath().equals("C:\\Windows\\System32")) {
@@ -137,6 +137,7 @@ public class Main {
 			result = false;
 			Files.move(inSubfolderForLatestLog.toPath(), latestLog.toPath(), StandardCopyOption.REPLACE_EXISTING);
 		} catch (FileSystemException e) {
+//			System.out.println(e.getMessage());
 			result = true;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -156,13 +157,13 @@ public class Main {
 		int maxFailedAttempts = 10;
 		if(!usedHalt) maxFailedAttempts = 60;
 		
-		while(!serverStopped || failedAtts < maxFailedAttempts) {
+		while(!serverStopped && failedAtts < maxFailedAttempts) {
 			try {
 				Thread.currentThread().sleep(1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			serverStopped = isServerOn();
+			serverStopped = !isServerOn();
 			if(!serverStopped) {
 				failedAtts++;
 				if(failedAtts==1) {
@@ -179,7 +180,7 @@ public class Main {
 			deleteFiles();
 			System.out.println("Starting the server back...");
 			try {
-				Thread.currentThread().sleep(200);
+				Thread.currentThread().sleep(400); // Maybe customize
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
