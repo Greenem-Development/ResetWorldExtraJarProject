@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.channels.Channel;
 import java.nio.file.CopyOption;
 import java.nio.file.FileSystemException;
@@ -58,6 +60,10 @@ public class Main {
 			e.printStackTrace();
 		}
 		
+		String ownVersionStr = "";
+		String ownVersion = getJarFileVersion();
+		if(ownVersion!=null) ownVersionStr = ", World Resetting Programm version: " + ownVersion;
+		System.out.println("Java version: " + System.getProperty("java.version") + ownVersionStr);
 		System.out.println("This is extra java programm required to reset the server worlds");
 		System.out.println("If it does show up (sometimes it doesn't), then everything is working fine");
 		
@@ -246,5 +252,35 @@ public class Main {
             }
         }
 		return true;
+	}
+	
+	public static String getJarFileVersion() {
+		String path = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+		String decodedPath = null;
+		try {
+			decodedPath = URLDecoder.decode(path, "UTF-8");
+			System.out.println(decodedPath);
+		} catch (UnsupportedEncodingException e) {
+			System.out.println("UnsupportedEncodingException (ignore this if you don't know what this is):\n" + e.getMessage());
+			return null;
+		}
+		String name = new File(decodedPath).getName();
+		name = name.substring(0, name.length()-4);
+		if(name.startsWith("ResetWorldAndRestart")) {
+			String version = name.substring(20).toLowerCase();
+			if(version.length() > 1) {
+				if(version.startsWith("v")) {
+					return version.substring(1);
+				}
+			}
+		}
+		return "Unknown";
+	}
+	
+	public static String getSeparator(String path) {
+		String separator = "/";
+//		if(path.contains("/")) separator = "/";
+		if(path.contains("\\")) separator = "\\";
+		return separator;
 	}
 }
