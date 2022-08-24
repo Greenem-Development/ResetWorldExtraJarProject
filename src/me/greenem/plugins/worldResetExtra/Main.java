@@ -206,7 +206,14 @@ public class Main {
 			@Override
 			public void run() {
 				try {
-					ps.set(Runtime.getRuntime().exec("cmd.exe /c \"pushd \"" + serverDirectory.getPath() + "\" && start cmd /c " + launchServerFileName + "\""));
+					String os = System.getProperty("os.name");
+					if(os.toLowerCase().contains("windows")) {
+						ps.set(Runtime.getRuntime().exec("cmd.exe /c \"pushd \"" + serverDirectory.getPath() + "\" && start cmd /c " + launchServerFileName + "\""));
+					} else {
+						ps.set(Runtime.getRuntime().exec("bash -c (" + launchServerFileName + ")", null, serverDirectory));
+//						Runtime.getRuntime().exec("fg " + ps.get().pid()); // TODO ???
+					}
+					
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
